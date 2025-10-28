@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: firebird5-config
+  namespace: firebird
+data:
+  firebird.conf: |
+    #############################################
+    # MODO E CACHE GLOBAL
+    ServerMode                 = Superclassic #SuperClassic
+    # aqui usamos página de 8 KiB, e alocamos 3 GiB de cache de dados:
+    DefaultDbCachePages        = 393216      # 393216 × 8 KiB = 3 GiB
+    UseFileSystemCache         = true
+
+    #############################################
+    # MEMÓRIA DE LOCKS
+    LockMemSize                = 256M        # costuma ser suficiente
+    LockHashSlots              = 65536       # ajuste proporcional a LockMemSize
+
+    #############################################
+    # TEMPORAIS (ordenções, hash)
+    TempCacheLimit             = 512M
+    InlineSortThreshold        = 32768
+
+    #############################################
+    # THREADS E PARALLELISMO
+    ParallelWorkers            = 4
+    MaxParallelWorkers         = 16
+    CpuAffinityMask            = 15
+
+    #############################################
+    # POOL DE CONEXÕES EXTERNAS
+    # defina um valor que cubra seu pico de conexões simultâneas,
+    # mas não em milhares (economiza memória):
+    ExtConnPoolSize            = 200
+    ExtConnPoolLifeTime        = 0
+
+    #############################################
+    # OTIMIZAÇÕES SQL
+    MaxStatementCacheSize      = 256K
+    OuterJoinConversion        = true
+    OptimizeForFirstRows       = false
+
+    #############################################
+    # REDE / SEGURANÇA
+    RemoteServicePort          = 3040
+    RemoteBindAddress          = 0.0.0.0
+    IPv6V6Only                 = false
+    TcpNoNagle                 = 1
+    WireCrypt                  = Enabled
+    AuthServer                 = Srp256, Legacy_Auth
+    UserManager                = Srp, Legacy_UserManager
+    SecurityDatabase           = /opt/firebird/security5.fdb
+
+    #############################################
+    # TIMEOUTS / DEADLOCK
+    DeadlockTimeout            = 10
+    ConnectionTimeout          = 0
+    DummyPacketInterval        = 120
+
+    #############################################
+    # LOGGING (diagnóstico)
+    TraceDSQL                  = false
+    TraceAPI                   = false
+
+  databases.conf: |
+    BANCO_001 = /var/lib/firebird/data/001.FDB
+    BANCO_002 = /var/lib/firebird/data/002.FDB
+    security.db = $(dir_secDb)/security5.fdb
+
+    # Override por banco se quiser cache maior
+    DefaultDBCachePages = 65536     # 512 MiB (por banco)
+    LockMemSize         = 256M      # 256 MiB (por banco)
+    TempCacheLimit      = 512M      # 512 MiB (por banco)

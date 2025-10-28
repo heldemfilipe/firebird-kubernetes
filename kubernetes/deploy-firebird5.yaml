@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: firebird5
+  namespace: firebird
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: firebird5
+  template:
+    metadata:
+      labels:
+        app: firebird5
+    spec:
+      nodeSelector:
+        dedicated: firebird
+      containers:
+      - name: firebird
+        image: firebirdsql/firebird:5.0.2
+        ports:
+        - containerPort: 3050
+
+        env:
+        - name: FIREBIRD_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: firebird-root-password
+              key: firebird-root-password
+        - name: FIREBIRD_DATABASE_DEFAULT_CHARSET
+          value: UTF8
+
+        volumeMounts:
+        - name: db-data
+          mountPath: /var/lib/firebird/data
+        - name: config
+          mountPath: /opt/firebird/firebird.conf
+          subPath: firebird.conf
+        - name: config
+          mountPath: /opt/firebird/databases.conf
+          subPath: databases.conf
+
+        resources:
+          requests:
+            cpu: "900m"
+            memory: "3.5Gi"
+          limits:
+            cpu: "1800m"
+            memory: "7.5Gi"
+
+      volumes:
+      - name: db-data
+        persistentVolumeClaim:
+          claimName: firebird5-pvc-efs
+      - name: config
+        configMap:
+          name: firebird5-config
+          items:
+            - key: firebird.conf
+              path: firebird.conf
+            - key: databases.conf
+              path: databases.conf
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: firebird5-hpa
+  namespace: firebird
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: firebird5
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60

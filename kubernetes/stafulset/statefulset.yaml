@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: firebird5-1
+  namespace: firebird
+spec:
+  serviceName: firebird-lb
+  replicas: 1
+  selector:
+    matchLabels:
+      app: firebird5
+  template:
+    metadata:
+      labels:
+        app: firebird5
+    spec:
+      nodeSelector:
+        dedicated: firebird
+      containers:
+      - name: firebird
+        image: firebirdsql/firebird:5.0.2
+        ports:
+        - containerPort: 3040
+        env:
+        - name: FIREBIRD_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: firebird-root-password
+              key: firebird-root-password
+        - name: FIREBIRD_DATABASE_DEFAULT_CHARSET
+          value: UTF8
+        volumeMounts:
+        - name: db-data
+          mountPath: /var/lib/firebird/data
+        - name: config
+          mountPath: /opt/firebird/firebird.conf
+          subPath: firebird.conf
+        - name: config
+          mountPath: /opt/firebird/databases.conf
+          subPath: databases.conf
+        resources:
+          requests:
+            cpu: "900m"
+            memory: "3.5Gi"
+          limits:
+            cpu: "1800m"
+            memory: "7Gi"
+      volumes:
+      - name: config
+        configMap:
+          name: firebird5-config
+          items:
+          - key: firebird.conf
+            path: firebird.conf
+          - key: databases.conf
+            path: databases.conf
+  volumeClaimTemplates:
+  - metadata:
+      name: db-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: ebs-sc
+      resources:
+        requests:
+          storage: 20Gi
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: firebird-vpa
+  namespace: firebird
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: firebird5-1
+  updatePolicy:
+    updateMode: "Auto"    # Pode ser "Off", "Initial", ou "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: firebird
+      minAllowed:
+        cpu: 800m
+        memory: 3Gi
+      maxAllowed:
+        cpu: 2
+        memory: 8Gi

@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: firebird5
+  namespace: firebird
+spec:
+  type: ClusterIP
+  selector:
+    app: firebird5
+  ports:
+  - port: 3050
+    targetPort: 3050
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: firebird-lb
+  namespace: firebird
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-target-type: "ip"
+spec:
+  type: LoadBalancer
+  ports:
+  - name: firebird
+    port: 3050
+    protocol: TCP
+    targetPort: 3050
+  selector:
+    app: firebird5

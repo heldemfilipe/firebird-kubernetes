@@ -1,0 +1,25 @@
+--- # Multiplos Bancos
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: firebird5-pvc-efs
+  namespace: firebird
+spec:
+  storageClassName: efs-sc
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 20Gi
+---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: firebird5-pvc-ebs
+#   namespace: firebird
+# spec:
+#   storageClassName: ebs-sc
+#   accessModes: ["ReadWriteOnce"]
+#   resources:
+#     requests:
+#       storage: 20Gi
